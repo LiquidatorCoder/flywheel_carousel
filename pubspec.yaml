@@ -1,0 +1,21 @@
+name: flywheel_carousel
+description: >-
+  A free-spinning, arc-shaped carousel for Flutter. Cards ride the rim of a
+  large invisible wheel; flicks coast under friction and snap to the nearest
+  card. Builder-driven and theme-agnostic — bring your own card content.
+version: 0.1.0
+
+publish_to: "none"
+
+environment:
+  sdk: ^3.11.1
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
