@@ -12,6 +12,12 @@ Cards ride the rim of a large invisible wheel — flicks coast under friction an
   <img src="https://img.shields.io/badge/license-BSD--3-orange" alt="license" />
 </p>
 
+<p align="center">
+  <img src="demo/1.gif" alt="Flywheel demo 1" width="30%" />
+  <img src="demo/2.gif" alt="Flywheel demo 2" width="30%" />
+  <img src="demo/3.gif" alt="Flywheel demo 3" width="30%" />
+</p>
+
 ---
 
 ```yaml
