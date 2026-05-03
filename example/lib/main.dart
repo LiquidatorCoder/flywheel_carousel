@@ -11,10 +11,7 @@ class FlywheelExampleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'flywheel_carousel',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD97757)),
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD97757)), useMaterial3: true),
       home: const _Home(),
     );
   }
@@ -38,13 +35,7 @@ class _Home extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _ColorCardDemo(),
-            _IconBuilderDemo(),
-            _NoLoopDemo(),
-          ],
-        ),
+        body: const TabBarView(children: [_ColorCardDemo(), _IconBuilderDemo(), _NoLoopDemo()]),
       ),
     );
   }
@@ -90,8 +81,7 @@ class _ColorCardDemoState extends State<_ColorCardDemo> {
               ),
             ),
             title: item.name,
-            subtitle:
-                '#${item.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+            subtitle: '#${item.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
             selected: isSelected,
           ),
         ),
@@ -110,13 +100,7 @@ class _IconBuilderDemo extends StatefulWidget {
 }
 
 class _IconBuilderDemoState extends State<_IconBuilderDemo> {
-  static const _icons = <IconData>[
-    Icons.bolt,
-    Icons.coffee,
-    Icons.spa,
-    Icons.travel_explore,
-    Icons.rocket_launch,
-  ];
+  static const _icons = <IconData>[Icons.bolt, Icons.coffee, Icons.spa, Icons.travel_explore, Icons.rocket_launch];
 
   int _selected = 0;
 
@@ -127,16 +111,15 @@ class _IconBuilderDemoState extends State<_IconBuilderDemo> {
       children: [
         FlywheelCarousel<IconData>(
           items: _icons,
+          wheelRadius: 240,
           onIndexChanged: (i) => setState(() => _selected = i),
           onTick: HapticFeedback.selectionClick,
           itemBuilder: (context, icon, isSelected) => Center(
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
-                    : Colors.transparent,
+                color: Colors.transparent,
                 border: Border.all(
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
@@ -144,7 +127,7 @@ class _IconBuilderDemoState extends State<_IconBuilderDemo> {
                   width: isSelected ? 2 : 1,
                 ),
               ),
-              child: Icon(icon, size: 48),
+              child: Icon(icon, size: 24),
             ),
           ),
         ),
