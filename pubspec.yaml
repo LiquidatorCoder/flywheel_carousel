@@ -5,7 +5,8 @@ description: >-
   card. Builder-driven and theme-agnostic — bring your own card content.
 version: 0.1.0
 
-publish_to: "none"
+repository: https://github.com/LiquidatorCoder/flywheel_carousel
+issue_tracker: https://github.com/LiquidatorCoder/flywheel_carousel/issues
 
 environment:
   sdk: ^3.11.1
