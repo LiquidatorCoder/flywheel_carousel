@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "adapter_api": 1,
+  "requires_core": ">=2.0.0 <3.0.0",
+  "name": "flywheel_carousel",
+  "integration_branch": "main",
+  "verification": {
+    "policy_files": [
+      ".claude/docs/routing.yaml",
+      "analysis_options.yaml"
+    ],
+    "fingerprint_exclude": [
+      ".dart_tool/",
+      "build/",
+      "example/.dart_tool/",
+      "example/build/",
+      "pubspec.lock",
+      "example/pubspec.lock",
+      "coverage/"
+    ],
+    "checks": {
+      "format": {
+        "cmd": [
+          "dart",
+          "format",
+          "--output=none",
+          "--set-exit-if-changed",
+          "."
+        ],
+        "description": "dart format --output=none --set-exit-if-changed .",
+        "requires_tool": "dart"
+      },
+      "analyze": {
+        "cmd": [
+          "flutter",
+          "analyze"
+        ],
+        "description": "flutter analyze",
+        "requires_tool": "flutter"
+      },
+      "test": {
+        "cmd": [
+          "flutter",
+          "test"
+        ],
+        "description": "flutter test",
+        "requires_tool": "flutter",
+        "requires_test_glob": {
+          "dir": "test",
+          "pattern": "_test\\.dart$"
+        }
+      },
+      "example_analyze": {
+        "cmd": [
+          "flutter",
+          "analyze"
+        ],
+        "description": "flutter analyze (in example/)",
+        "subdir": "example",
+        "requires_tool": "flutter",
+        "requires_file": "example/pubspec.yaml"
+      },
+      "publish_dry_run": {
+        "cmd": [
+          "flutter",
+          "pub",
+          "publish",
+          "--dry-run"
+        ],
+        "description": "flutter pub publish --dry-run",
+        "requires_tool": "flutter"
+      }
+    },
+    "tiers": {
+      "fast": [
+        "format",
+        "analyze"
+      ],
+      "normal": [
+        "format",
+        "analyze",
+        "test",
+        "example_analyze"
+      ],
+      "full": [
+        "format",
+        "analyze",
+        "test",
+        "example_analyze",
+        "publish_dry_run"
+      ]
+    }
+  },
+  "risk": {
+    "rules": [
+      {
+        "match": "pubspec.yaml",
+        "tier": "full",
+        "why": "SDK/Flutter constraints, the (empty) dependency list, the published version and the pub.dev metadata all live here"
+      },
+      {
+        "match": "CHANGELOG.md",
+        "tier": "full",
+        "why": "part of the pub.dev release artifact, changed together with the version"
+      },
+      {
+        "match": "LICENSE",
+        "tier": "full",
+        "why": "distribution terms of the published archive; pub validates its presence"
+      },
+      {
+        "match": "lib/flywheel_carousel.dart",
+        "tier": "full",
+        "why": "the public export barrel \u2014 four explicit `show` clauses are the entire public surface, with no wildcard export to soften a rename"
+      },
+      {
+        "match": "lib/src/flywheel_physics.dart",
+        "tier": "full",
+        "why": "FreewheelPhysics is exported and subclassable, and nothing in the test suite flings the carousel \u2014 the suite cannot catch a regression here"
+      },
+      {
+        "match": "lib/**",
+        "tier": "normal",
+        "why": "package implementation consumed by real apps; the widget-test suite is what exercises it"
+      },
+      {
+        "match": "test/**",
+        "tier": "normal",
+        "why": "a change to a test changes what passing means \u2014 the suite must actually run"
+      },
+      {
+        "match": "analysis_options.yaml",
+        "tier": "normal",
+        "why": "flutter_lints plus seven hand-enabled rules; a change here re-scopes every analyze run on the package side"
+      },
+      {
+        "match": "tool/harness/**",
+        "tier": "normal",
+        "why": "verifier and gate logic"
+      },
+      {
+        "match": ".claude/docs/routing.yaml",
+        "tier": "normal",
+        "why": "verification policy"
+      },
+      {
+        "match": "AGENTS.md",
+        "tier": "normal",
+        "why": "the rules agents work from"
+      },
+      {
+        "match": "demo/**",
+        "tier": "fast",
+        "why": "README media; inside the published archive but not validated by pub (pubspec.yaml declares no `screenshots:` block)"
+      },
+      {
+        "match": "example/**",
+        "tier": "fast",
+        "why": "demo app (publish_to: none), ios/ runner included; not depended on by lib/, and analysed on its own in the normal tier"
+      },
+      {
+        "match": "README.md",
+        "tier": "fast",
+        "why": "documentation \u2014 but it carries the API/defaults table that must stay in step with the constructor"
+      },
+      {
+        "match": "docs/**",
+        "tier": "fast",
+        "why": "agent-facing documentation; not shipped in the archive"
+      },
+      {
+        "match": ".claude/tasks/**",
+        "tier": "fast",
+        "why": "task bookkeeping"
+      },
+      {
+        "match": ".dart_tool/**",
+        "tier": "fast",
+        "why": "tracked by accident and rewritten by every `flutter pub get`; excluded from fingerprints"
+      },
+      {
+        "match": "pubspec.lock",
+        "tier": "fast",
+        "why": "generated by pub resolution, tracked here; same trap as .dart_tool/"
+      },
+      {
+        "match": "*",
+        "tier": "fast",
+        "why": "default floor \u2014 nothing here is verification-exempt"
+      }
+    ]
+  },
+  "review": {
+    "wired": true,
+    "default_mode": "none",
+    "rules": [
+      {
+        "match": "pubspec.yaml",
+        "mode": "standard",
+        "why": "version, SDK/Flutter constraints and publish metadata \u2014 the release path"
+      },
+      {
+        "match": "lib/flywheel_carousel.dart",
+        "mode": "standard",
+        "why": "four explicit `show` clauses are the entire public surface. A changed export is a compile break downstream"
+      },
+      {
+        "match": "lib/src/flywheel_carousel.dart",
+        "mode": "standard",
+        "why": "FlywheelCarousel's thirteen constructor parameters and their default values are the package's public contract, documented in README.md's API table. Changing a default silently restyles every consumer's carousel on upgrade"
+      },
+      {
+        "match": "lib/src/flywheel_physics.dart",
+        "mode": "standard",
+        "why": "FreewheelPhysics is exported for consumers to wrap or subclass, and its createBallisticSimulation override has no test coverage at all"
+      },
+      {
+        "match": "lib/src/flywheel_item_card.dart",
+        "mode": "standard",
+        "why": "FlywheelItemCard is an exported widget with twelve parameters host apps construct directly; its defaults are its layout contract"
+      },
+      {
+        "match": "LICENSE",
+        "mode": "standard",
+        "why": "distribution terms of a published artifact"
+      }
+    ],
+    "preamble": [
+      "flywheel_carousel is a published Flutter package (pub.dev): a free-spinning,",
+      "arc-shaped carousel. It has zero third-party dependencies. Review the diff below for",
+      "correctness and for anything that would break a downstream consumer:",
+      "",
+      "- changed `show` clauses in lib/flywheel_carousel.dart (four symbols are the entire",
+      "  public surface \u2014 there is no wildcard export),",
+      "- changed constructor parameters OR DEFAULT VALUES on FlywheelCarousel and",
+      "  FlywheelItemCard: the defaults are documented in README.md's API table and in",
+      "  CHANGELOG.md, and a changed default silently restyles every consumer on upgrade,",
+      "- changed FlywheelItemBuilder or FreewheelPhysics signatures,",
+      "- the ballistic/friction maths in flywheel_physics.dart and the arc trigonometry in",
+      "  flywheel_wheel.dart: NOTHING in the test suite covers either, so a green verify run",
+      "  is not evidence about them,",
+      "- version/CHANGELOG/README consistency.",
+      "",
+      "Keep `package:flutter/material.dart` out of everything except",
+      "flywheel_item_card.dart \u2014 theme-agnosticism is a documented property of this package.",
+      "The `example/` app is a demo, not a product."
+    ],
+    "generated": [
+      "\\.(g|freezed|config|gr|mocks)\\.dart$",
+      "^(\\.dart_tool/|example/\\.dart_tool/)",
+      "(^|/)pubspec\\.lock$"
+    ],
+    "policy_files": [
+      ".claude/docs/routing.yaml"
+    ]
+  },
+  "locks": [
+    "dependency-resolution",
+    "repo-format",
+    "release"
+  ],
+  "native": {}
+}
