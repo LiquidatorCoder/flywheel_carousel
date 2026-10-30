@@ -124,8 +124,7 @@ not your change. If `analyze` or `test` fails, that is new and it is yours.
 ## Independent review
 
 Optional here, and required only on the release path — see `review:` in
-`.claude/docs/routing.yaml` and `tool/harness/lib/reviewpolicy.mjs`. The reviewer model is
-pinned to `gpt-5.6-sol` in `tool/harness/review` (override with
-`FLYWHEEL_CAROUSEL_REVIEW_MODEL`). If the Codex CLI is unavailable or on the wrong model,
-`tool/harness/review run` writes an `incomplete` review and exits non-zero. There is no
+`.claude/docs/routing.yaml` and `tool/harness/lib/reviewpolicy.mjs`. Independent review is performed by the reviewer configured in the active global harness policy
+(`~/.claude/harness/current/policies/global.md`); this repo only sets risk floors. If the reviewer is
+unavailable, `tool/harness/review run` writes an `incomplete` review and exits non-zero. There is no
 path from "review unavailable" to "review passed".
