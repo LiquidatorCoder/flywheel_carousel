@@ -50,26 +50,56 @@ class FlywheelCarousel<T> extends StatefulWidget {
 class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
   static const _loopMultiplier = 5000;
 
-  late final PageController _controller;
+  late PageController _controller;
   late int _selectedIndex;
   late int _lastTickPage;
 
   int get _count => widget.items.length;
 
-  int _initialPage() => widget.loop
-      ? _loopMultiplier * _count + widget.initialIndex.clamp(0, _count - 1)
-      : widget.initialIndex.clamp(0, _count - 1);
+  int _pageFor(int index) => widget.loop ? _loopMultiplier * _count + index : index;
+
+  int _initialPage() => _pageFor(widget.initialIndex.clamp(0, _count - 1));
+
+  PageController _createController(int page) {
+    return PageController(viewportFraction: widget.viewportFraction, initialPage: page)
+      ..addListener(_onWheelTick);
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex.clamp(0, _count - 1);
     _lastTickPage = _initialPage();
-    _controller = PageController(
-      viewportFraction: widget.viewportFraction,
-      initialPage: _lastTickPage,
-    );
-    _controller.addListener(_onWheelTick);
+    _controller = _createController(_lastTickPage);
+  }
+
+  @override
+  void didUpdateWidget(FlywheelCarousel<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewportFraction == widget.viewportFraction &&
+        oldWidget.loop == widget.loop &&
+        oldWidget.items.length == widget.items.length) {
+      return;
+    }
+
+    // The page <-> item mapping or the page extent changed: restart the
+    // controller on the equivalent page of the (clamped) current item.
+    final previousIndex = _selectedIndex;
+    _selectedIndex = _selectedIndex.clamp(0, _count - 1);
+    _lastTickPage = _pageFor(_selectedIndex);
+
+    final old = _controller;
+    old.removeListener(_onWheelTick);
+    _controller = _createController(_lastTickPage);
+    // The old controller is still attached until this frame's build swaps it.
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+
+    if (_selectedIndex != previousIndex) {
+      final index = _selectedIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onIndexChanged?.call(index);
+      });
+    }
   }
 
   @override
@@ -86,6 +116,7 @@ class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
     if (page == null) return;
     final rounded = page.round();
     if (rounded == _lastTickPage) return;
+    final crossed = (rounded - _lastTickPage).abs();
     _lastTickPage = rounded;
 
     final index = ((rounded % _count) + _count) % _count;
@@ -94,60 +125,73 @@ class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
       widget.onIndexChanged?.call(index);
     }
 
-    widget.onTick?.call();
+    // One tick per crossed page, so a multi-page jump still ticks each page.
+    for (var i = 0; i < crossed; i++) {
+      widget.onTick?.call();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewportWidth = MediaQuery.sizeOf(context).width;
-    final cardWidth = viewportWidth * widget.viewportFraction;
     // Unbounded in loop mode: a finite huge count trips the sliver's
     // itemExtent-multiple precision assert at many widths.
     final int? virtualItemCount = widget.loop ? null : _count;
 
     return SizedBox(
       height: widget.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Gesture/scroll layer — invisible items, drives the controller.
-          PageView.builder(
-            controller: _controller,
-            pageSnapping: false,
-            physics: FreewheelPhysics(
-              viewportFraction: widget.viewportFraction,
-              dragCoefficient: widget.dragCoefficient,
-            ),
-            itemCount: virtualItemCount,
-            itemBuilder: (_, _) => const SizedBox.shrink(),
-          ),
-          // Visual layer — renders cards on the wheel's arc with z-order
-          // so the center card always sits on top of its neighbours.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) {
-                  final page = _controller.hasClients
-                      ? (_controller.page ?? _initialPage().toDouble())
-                      : _initialPage().toDouble();
-                  return FlywheelWheel<T>(
-                    page: page,
-                    items: widget.items,
-                    selectedIndex: _selectedIndex,
-                    itemBuilder: widget.itemBuilder,
-                    cardWidth: cardWidth,
-                    cardHeight: widget.cardHeight,
-                    angularStep: widget.angularStep,
-                    radius: widget.wheelRadius,
-                    visibleSlots: widget.visibleSlots,
-                    loop: widget.loop,
-                  );
-                },
+      // Pages are sized from the carousel's own width, so cards must be too.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          final cardWidth = width * widget.viewportFraction;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Gesture/scroll layer — invisible items, drives the controller.
+              PageView.builder(
+                // A new controller needs a fresh scroll position: without the
+                // key the old pixel offset would carry over to the new page map.
+                key: ObjectKey(_controller),
+                controller: _controller,
+                pageSnapping: false,
+                physics: FreewheelPhysics(
+                  viewportFraction: widget.viewportFraction,
+                  dragCoefficient: widget.dragCoefficient,
+                ),
+                itemCount: virtualItemCount,
+                itemBuilder: (_, _) => const SizedBox.shrink(),
               ),
-            ),
-          ),
-        ],
+              // Visual layer — renders cards on the wheel's arc with z-order
+              // so the center card always sits on top of its neighbours.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) {
+                      final page = _controller.hasClients
+                          ? (_controller.page ?? _pageFor(_selectedIndex).toDouble())
+                          : _pageFor(_selectedIndex).toDouble();
+                      return FlywheelWheel<T>(
+                        page: page,
+                        items: widget.items,
+                        selectedIndex: _selectedIndex,
+                        itemBuilder: widget.itemBuilder,
+                        cardWidth: cardWidth,
+                        cardHeight: widget.cardHeight,
+                        angularStep: widget.angularStep,
+                        radius: widget.wheelRadius,
+                        visibleSlots: widget.visibleSlots,
+                        loop: widget.loop,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

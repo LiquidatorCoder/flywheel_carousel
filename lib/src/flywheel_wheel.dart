@@ -48,7 +48,7 @@ class FlywheelWheel<T> extends StatelessWidget {
         if (rawIndex < 0 || rawIndex >= count) continue;
         index = rawIndex;
       }
-      slots.add(_Slot<T>(t: rawIndex - page, item: items[index], index: index));
+      slots.add(_Slot<T>(t: rawIndex - page, item: items[index], index: index, rawIndex: rawIndex));
     }
     slots.sort((a, b) => b.t.abs().compareTo(a.t.abs()));
 
@@ -58,6 +58,7 @@ class FlywheelWheel<T> extends StatelessWidget {
       children: [
         for (final slot in slots)
           _ArcCard<T>(
+            key: ValueKey<int>(slot.rawIndex),
             t: slot.t,
             item: slot.item,
             selected: slot.index == selectedIndex,
@@ -65,6 +66,7 @@ class FlywheelWheel<T> extends StatelessWidget {
             cardHeight: cardHeight,
             angularStep: angularStep,
             radius: radius,
+            visibleSlots: visibleSlots,
             itemBuilder: itemBuilder,
           ),
       ],
@@ -73,14 +75,16 @@ class FlywheelWheel<T> extends StatelessWidget {
 }
 
 class _Slot<T> {
-  const _Slot({required this.t, required this.item, required this.index});
+  const _Slot({required this.t, required this.item, required this.index, required this.rawIndex});
   final double t;
   final T item;
   final int index;
+  final int rawIndex;
 }
 
 class _ArcCard<T> extends StatelessWidget {
   const _ArcCard({
+    super.key,
     required this.t,
     required this.item,
     required this.selected,
@@ -88,6 +92,7 @@ class _ArcCard<T> extends StatelessWidget {
     required this.cardHeight,
     required this.angularStep,
     required this.radius,
+    required this.visibleSlots,
     required this.itemBuilder,
   });
 
@@ -98,18 +103,27 @@ class _ArcCard<T> extends StatelessWidget {
   final double cardHeight;
   final double angularStep;
   final double radius;
+  final int visibleSlots;
   final FlywheelItemBuilder<T> itemBuilder;
 
   @override
   Widget build(BuildContext context) {
-    final tc = t.clamp(-2.5, 2.5);
+    // The window edge: a card this far from the centre is fully faded out.
+    final edge = visibleSlots + 0.5;
+    final tc = t.clamp(-edge, edge);
     final abs = tc.abs();
     final theta = tc * angularStep;
 
     final arcX = radius * sin(theta);
     final arcY = radius * (1.0 - cos(theta));
 
-    final opacity = 1.0 - Curves.easeIn.transform((abs / 1.5).clamp(0.0, 1.0)) * 0.85;
+    // Near-centre curve up to `fadeStart`, then a linear fade to 0 at the edge
+    // so cards never pop in or out when the window moves.
+    final fadeStart = max(0.0, min(1.5, visibleSlots - 0.5));
+    final base = 1.0 - Curves.easeIn.transform((min(abs, fadeStart) / 1.5).clamp(0.0, 1.0)) * 0.85;
+    final fade = abs <= fadeStart ? 1.0 : ((edge - abs) / (edge - fadeStart)).clamp(0.0, 1.0);
+    final opacity = base * fade;
+    if (opacity <= 0) return const SizedBox.shrink();
 
     return Opacity(
       opacity: opacity,

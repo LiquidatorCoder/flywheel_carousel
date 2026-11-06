@@ -334,19 +334,14 @@ void main() {
     // B8 — fixed in fix/freewheel-physics (catch-mid-coast settle ~900 ms).
   );
 
-  testWidgets(
-    'E10_jump_counts_ticks [S9]',
-    (tester) async {
-      final probe = Probe();
-      await pumpFixture(tester, probe);
-      final c = controllerOf(tester);
-      c.jumpTo(c.position.pixels + 3 * pageWidthOf(tester));
-      await tester.pump(frame);
-      expect(probe.ticks, 3);
-    },
-    // S9 — fixed in fix/wheel-correctness (one tick per notification, not per page).
-    skip: knownBug('S9'),
-  );
+  testWidgets('E10_jump_counts_ticks [S9]', (tester) async {
+    final probe = Probe();
+    await pumpFixture(tester, probe);
+    final c = controllerOf(tester);
+    c.jumpTo(c.position.pixels + 3 * pageWidthOf(tester));
+    await tester.pump(frame);
+    expect(probe.ticks, 3);
+  });
 
   testWidgets('E10b_slow_drag_two_pages_two_ticks', (tester) async {
     final probe = Probe();
@@ -362,59 +357,44 @@ void main() {
     expect(probe.indexes, [1, 2]);
   });
 
-  testWidgets(
-    'E11_visible_slots_distinct_centers [S1]',
-    (tester) async {
-      final probe = Probe();
-      await pumpFixture(tester, probe, count: 12, initialIndex: 5, visibleSlots: 4);
-      Offset center(int i) => tester.getCenter(find.byKey(ValueKey('card-$i')));
-      expect((center(9) - center(8)).distance, greaterThan(1), reason: 'offsets +4 and +3 stacked');
-      expect((center(1) - center(2)).distance, greaterThan(1), reason: 'offsets -4 and -3 stacked');
-    },
-    // S1 — fixed in fix/wheel-correctness (t clamped to +-2.5).
-    skip: knownBug('S1'),
-  );
+  testWidgets('E11_visible_slots_distinct_centers [S1]', (tester) async {
+    final probe = Probe();
+    await pumpFixture(tester, probe, count: 12, initialIndex: 5, visibleSlots: 4);
+    Offset center(int i) => tester.getCenter(find.byKey(ValueKey('card-$i')));
+    expect((center(9) - center(8)).distance, greaterThan(1), reason: 'offsets +4 and +3 stacked');
+    expect((center(1) - center(2)).distance, greaterThan(1), reason: 'offsets -4 and -3 stacked');
+  });
 
-  testWidgets(
-    'E12_stateful_items_keep_identity [S2]',
-    (tester) async {
-      final probe = Probe();
-      await pumpFixture(tester, probe, kind: CardKind.stateful);
-      final c = controllerOf(tester);
-      final mismatches = <String>[];
-      void check() {
-        for (final s in tester.stateList<StatefulCardState>(find.byType(StatefulCard))) {
-          if (s.initialLabel != s.widget.label) {
-            mismatches.add('state ${s.initialLabel} shows item ${s.widget.label}');
-          }
+  testWidgets('E12_stateful_items_keep_identity [S2]', (tester) async {
+    final probe = Probe();
+    await pumpFixture(tester, probe, kind: CardKind.stateful);
+    final c = controllerOf(tester);
+    final mismatches = <String>[];
+    void check() {
+      for (final s in tester.stateList<StatefulCardState>(find.byType(StatefulCard))) {
+        if (s.initialLabel != s.widget.label) {
+          mismatches.add('state ${s.initialLabel} shows item ${s.widget.label}');
         }
       }
+    }
 
-      await dragStill(
-        tester,
-        gestureStart(tester),
-        -6 * 0.3 * pageWidthOf(tester),
-        steps: 6,
-        onStep: check,
-      );
-      await awaitSettle(tester, c);
-      check();
-      expect(mismatches, isEmpty);
-    },
-    // S2 — fixed in fix/wheel-correctness (cards keyed by item).
-    skip: knownBug('S2'),
-  );
+    await dragStill(
+      tester,
+      gestureStart(tester),
+      -6 * 0.3 * pageWidthOf(tester),
+      steps: 6,
+      onStep: check,
+    );
+    await awaitSettle(tester, c);
+    check();
+    expect(mismatches, isEmpty);
+  });
 
-  testWidgets(
-    'E13_narrow_parent_card_width [S3]',
-    (tester) async {
-      final probe = Probe();
-      await pumpFixture(tester, probe, width: 300);
-      expect(tester.getSize(find.byKey(const ValueKey('card-0'))).width, closeTo(300 * 0.65, 0.5));
-    },
-    // S3 — fixed in fix/wheel-correctness (card width from parent constraints).
-    skip: knownBug('S3'),
-  );
+  testWidgets('E13_narrow_parent_card_width [S3]', (tester) async {
+    final probe = Probe();
+    await pumpFixture(tester, probe, width: 300);
+    expect(tester.getSize(find.byKey(const ValueKey('card-0'))).width, closeTo(300 * 0.65, 0.5));
+  });
 
   void rotateToLandscape(WidgetTester tester) {
     final size = tester.view.physicalSize;
