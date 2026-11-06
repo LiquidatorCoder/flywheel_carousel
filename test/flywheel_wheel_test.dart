@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flywheel_carousel/src/flywheel_wheel.dart';
@@ -32,7 +33,10 @@ Widget _wheel({
         width: 400,
         height: 230,
         child: FlywheelWheel<int>(
-          page: page,
+          // An unattached controller: the wheel paints from `fallbackPage`.
+          controller: PageController(),
+          fallbackPage: page,
+          centerPage: page.round(),
           items: List<int>.generate(count, (i) => i),
           selectedIndex: page.round() % count,
           itemBuilder:
@@ -61,11 +65,25 @@ void main() {
 
   testWidgets('L1: opacity is full at centre and fades toward the window edge', (tester) async {
     await tester.pumpWidget(_wheel(page: 5.25, visibleSlots: 2));
-    double opacityOf(int i) => tester
-        .widget<Opacity>(
-          find.ancestor(of: find.byKey(ValueKey('card-$i')), matching: find.byType(Opacity)),
-        )
-        .opacity;
+    // Opacity is applied at paint time: read it from the card's OpacityLayer
+    // (an opaque card has none).
+    double opacityOf(int i) {
+      Layer? layer = tester
+          .renderObject(
+            find
+                .ancestor(
+                  of: find.byKey(ValueKey('card-$i')),
+                  matching: find.byType(RepaintBoundary),
+                )
+                .first,
+          )
+          .debugLayer;
+      while (layer != null && layer is! OpacityLayer) {
+        layer = layer.parent;
+      }
+      return layer is OpacityLayer ? (layer.alpha ?? 255) / 255 : 1.0;
+    }
+
     expect(opacityOf(5), greaterThan(0.9));
     // card 3 is at t = -2.25: inside the window but nearly faded out.
     expect(opacityOf(3), lessThan(0.15));
