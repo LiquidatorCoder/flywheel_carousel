@@ -119,11 +119,12 @@ class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
     final crossed = (rounded - _lastTickPage).abs();
     _lastTickPage = rounded;
 
+    // The card window is built around the center page, so rebuild on every
+    // crossing (and never between crossings: the wheel repaints on its own).
     final index = ((rounded % _count) + _count) % _count;
-    if (index != _selectedIndex) {
-      setState(() => _selectedIndex = index);
-      widget.onIndexChanged?.call(index);
-    }
+    final indexChanged = index != _selectedIndex;
+    setState(() => _selectedIndex = index);
+    if (indexChanged) widget.onIndexChanged?.call(index);
 
     // One tick per crossed page, so a multi-page jump still ticks each page.
     for (var i = 0; i < crossed; i++) {
@@ -167,25 +168,19 @@ class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
               // so the center card always sits on top of its neighbours.
               Positioned.fill(
                 child: IgnorePointer(
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      final page = _controller.hasClients
-                          ? (_controller.page ?? _pageFor(_selectedIndex).toDouble())
-                          : _pageFor(_selectedIndex).toDouble();
-                      return FlywheelWheel<T>(
-                        page: page,
-                        items: widget.items,
-                        selectedIndex: _selectedIndex,
-                        itemBuilder: widget.itemBuilder,
-                        cardWidth: cardWidth,
-                        cardHeight: widget.cardHeight,
-                        angularStep: widget.angularStep,
-                        radius: widget.wheelRadius,
-                        visibleSlots: widget.visibleSlots,
-                        loop: widget.loop,
-                      );
-                    },
+                  child: FlywheelWheel<T>(
+                    controller: _controller,
+                    fallbackPage: _pageFor(_selectedIndex).toDouble(),
+                    centerPage: _lastTickPage,
+                    items: widget.items,
+                    selectedIndex: _selectedIndex,
+                    itemBuilder: widget.itemBuilder,
+                    cardWidth: cardWidth,
+                    cardHeight: widget.cardHeight,
+                    angularStep: widget.angularStep,
+                    radius: widget.wheelRadius,
+                    visibleSlots: widget.visibleSlots,
+                    loop: widget.loop,
                   ),
                 ),
               ),

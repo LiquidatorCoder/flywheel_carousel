@@ -480,20 +480,15 @@ void main() {
     expect(isIntegerPage(c.page!), isTrue);
   });
 
-  testWidgets(
-    'E16_builder_calls_per_frame [S5]',
-    (tester) async {
-      final probe = Probe();
-      await pumpFixture(tester, probe);
-      final c = controllerOf(tester);
+  testWidgets('E16_builder_calls_per_frame [S5]', (tester) async {
+    final probe = Probe();
+    await pumpFixture(tester, probe);
+    final c = controllerOf(tester);
 
-      final m = await measure('E16_builder_calls_per_frame', () async {
-        final sw = await flingRelease(tester, gestureStart(tester), -200, 3000);
-        await awaitSettle(tester, c, since: sw, timeout: const Duration(seconds: 12));
-      });
-      expect(m['builder_calls_per_frame'] ?? 0, lessThanOrEqualTo(0.5));
-    },
-    // S5 — fixed in the perf PR (itemBuilder runs for every visible card every frame).
-    skip: knownBug('S5'),
-  );
+    final m = await measure('E16_builder_calls_per_frame', () async {
+      final sw = await flingRelease(tester, gestureStart(tester), -200, 3000);
+      await awaitSettle(tester, c, since: sw, timeout: const Duration(seconds: 12));
+    });
+    expect(m['builder_calls_per_frame'] ?? 0, lessThanOrEqualTo(0.5));
+  });
 }

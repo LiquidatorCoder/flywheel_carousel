@@ -1,16 +1,36 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 
 typedef FlywheelItemBuilder<T> = Widget Function(BuildContext context, T item, bool isSelected);
 
+/// Opacity of a card at (already clamped) wheel distance [tc] from the centre:
+/// a near-centre curve up to `fadeStart`, then a linear fade to 0 at the window
+/// edge so cards never pop in or out when the window moves.
+double _cardOpacity(double tc, int visibleSlots) {
+  final edge = visibleSlots + 0.5;
+  final abs = tc.abs();
+  final fadeStart = max(0.0, min(1.5, visibleSlots - 0.5));
+  final base = 1.0 - Curves.easeIn.transform((min(abs, fadeStart) / 1.5).clamp(0.0, 1.0)) * 0.85;
+  final fade = abs <= fadeStart ? 1.0 : ((edge - abs) / (edge - fadeStart)).clamp(0.0, 1.0);
+  return base * fade;
+}
+
 /// Renders a window of cards arranged on the rim of a circle whose center sits
-/// below the carousel. The center card always sits on top of its neighbours
-/// thanks to the z-order sort below.
+/// below the carousel.
+///
+/// The card widgets are built only when [centerPage] or [selectedIndex]
+/// changes. Every frame in between only repaints: a [Flow] listens to
+/// [controller] and re-composites each card's cached layer with a new
+/// transform/opacity, painting the farthest cards first so the center card
+/// always sits on top.
 class FlywheelWheel<T> extends StatelessWidget {
   const FlywheelWheel({
     super.key,
-    required this.page,
+    required this.controller,
+    required this.fallbackPage,
+    required this.centerPage,
     required this.items,
     required this.selectedIndex,
     required this.itemBuilder,
@@ -22,7 +42,14 @@ class FlywheelWheel<T> extends StatelessWidget {
     required this.loop,
   });
 
-  final double page;
+  /// Drives the per-frame repaint; its `page` positions the cards.
+  final PageController controller;
+
+  /// The page to use while [controller] has no scroll position yet.
+  final double fallbackPage;
+
+  /// `page.round()` — the center of the built window.
+  final int centerPage;
   final List<T> items;
   final int selectedIndex;
   final FlywheelItemBuilder<T> itemBuilder;
@@ -35,12 +62,12 @@ class FlywheelWheel<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final centerInt = page.round();
     final count = items.length;
 
-    final slots = <_Slot<T>>[];
+    final rawIndices = <int>[];
+    final children = <Widget>[];
     for (int o = -visibleSlots; o <= visibleSlots; o++) {
-      final rawIndex = centerInt + o;
+      final rawIndex = centerPage + o;
       final int index;
       if (loop) {
         index = ((rawIndex % count) + count) % count;
@@ -48,96 +75,99 @@ class FlywheelWheel<T> extends StatelessWidget {
         if (rawIndex < 0 || rawIndex >= count) continue;
         index = rawIndex;
       }
-      slots.add(_Slot<T>(t: rawIndex - page, item: items[index], index: index, rawIndex: rawIndex));
-    }
-    slots.sort((a, b) => b.t.abs().compareTo(a.t.abs()));
-
-    return Stack(
-      alignment: Alignment.topCenter,
-      clipBehavior: Clip.none,
-      children: [
-        for (final slot in slots)
-          _ArcCard<T>(
-            key: ValueKey<int>(slot.rawIndex),
-            t: slot.t,
-            item: slot.item,
-            selected: slot.index == selectedIndex,
-            cardWidth: cardWidth,
-            cardHeight: cardHeight,
-            angularStep: angularStep,
-            radius: radius,
-            visibleSlots: visibleSlots,
-            itemBuilder: itemBuilder,
+      rawIndices.add(rawIndex);
+      children.add(
+        RepaintBoundary(
+          key: ValueKey<int>(rawIndex),
+          child: SizedBox(
+            width: cardWidth,
+            height: cardHeight,
+            child: itemBuilder(context, items[index], index == selectedIndex),
           ),
-      ],
+        ),
+      );
+    }
+
+    return Flow.unwrapped(
+      clipBehavior: Clip.none,
+      delegate: _WheelFlowDelegate(
+        controller: controller,
+        fallbackPage: fallbackPage,
+        rawIndices: rawIndices,
+        cardWidth: cardWidth,
+        cardHeight: cardHeight,
+        angularStep: angularStep,
+        radius: radius,
+        visibleSlots: visibleSlots,
+      ),
+      children: children,
     );
   }
 }
 
-class _Slot<T> {
-  const _Slot({required this.t, required this.item, required this.index, required this.rawIndex});
-  final double t;
-  final T item;
-  final int index;
-  final int rawIndex;
-}
-
-class _ArcCard<T> extends StatelessWidget {
-  const _ArcCard({
-    super.key,
-    required this.t,
-    required this.item,
-    required this.selected,
+class _WheelFlowDelegate extends FlowDelegate {
+  _WheelFlowDelegate({
+    required this.controller,
+    required this.fallbackPage,
+    required this.rawIndices,
     required this.cardWidth,
     required this.cardHeight,
     required this.angularStep,
     required this.radius,
     required this.visibleSlots,
-    required this.itemBuilder,
-  });
+  }) : super(repaint: controller);
 
-  final double t;
-  final T item;
-  final bool selected;
+  final PageController controller;
+  final double fallbackPage;
+  final List<int> rawIndices;
   final double cardWidth;
   final double cardHeight;
   final double angularStep;
   final double radius;
   final int visibleSlots;
-  final FlywheelItemBuilder<T> itemBuilder;
 
   @override
-  Widget build(BuildContext context) {
-    // The window edge: a card this far from the centre is fully faded out.
+  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) =>
+      BoxConstraints.tight(Size(cardWidth, cardHeight));
+
+  @override
+  void paintChildren(FlowPaintingContext context) {
+    final page = controller.hasClients ? (controller.page ?? fallbackPage) : fallbackPage;
     final edge = visibleSlots + 0.5;
-    final tc = t.clamp(-edge, edge);
-    final abs = tc.abs();
-    final theta = tc * angularStep;
 
-    final arcX = radius * sin(theta);
-    final arcY = radius * (1.0 - cos(theta));
+    final order = List<int>.generate(rawIndices.length, (i) => i);
+    final ts = [for (final raw in rawIndices) raw - page];
+    // Farthest first so the center card is painted last (on top).
+    order.sort((a, b) => ts[b].abs().compareTo(ts[a].abs()));
 
-    // Near-centre curve up to `fadeStart`, then a linear fade to 0 at the edge
-    // so cards never pop in or out when the window moves.
-    final fadeStart = max(0.0, min(1.5, visibleSlots - 0.5));
-    final base = 1.0 - Curves.easeIn.transform((min(abs, fadeStart) / 1.5).clamp(0.0, 1.0)) * 0.85;
-    final fade = abs <= fadeStart ? 1.0 : ((edge - abs) / (edge - fadeStart)).clamp(0.0, 1.0);
-    final opacity = base * fade;
-    if (opacity <= 0) return const SizedBox.shrink();
-
-    return Opacity(
-      opacity: opacity,
-      child: Transform.translate(
-        offset: Offset(arcX, arcY),
-        child: Transform.rotate(
-          angle: theta,
-          child: SizedBox(
-            width: cardWidth,
-            height: cardHeight,
-            child: itemBuilder(context, item, selected),
-          ),
-        ),
-      ),
-    );
+    // Cards are laid out at the origin; centre them horizontally at the top.
+    final left = (context.size.width - cardWidth) / 2;
+    for (final i in order) {
+      final tc = ts[i].clamp(-edge, edge);
+      final opacity = _cardOpacity(tc, visibleSlots);
+      if (opacity <= 0) continue;
+      final theta = tc * angularStep;
+      final transform =
+          Matrix4.translationValues(left + radius * sin(theta), radius * (1.0 - cos(theta)), 0)
+            ..translateByDouble(cardWidth / 2, cardHeight / 2, 0, 1)
+            ..rotateZ(theta)
+            ..translateByDouble(-cardWidth / 2, -cardHeight / 2, 0, 1);
+      context.paintChild(i, transform: transform, opacity: opacity);
+    }
   }
+
+  @override
+  bool shouldRelayout(_WheelFlowDelegate old) =>
+      old.cardWidth != cardWidth || old.cardHeight != cardHeight;
+
+  @override
+  bool shouldRepaint(_WheelFlowDelegate old) =>
+      old.controller != controller ||
+      old.fallbackPage != fallbackPage ||
+      old.cardWidth != cardWidth ||
+      old.cardHeight != cardHeight ||
+      old.angularStep != angularStep ||
+      old.radius != radius ||
+      old.visibleSlots != visibleSlots ||
+      !listEquals(old.rawIndices, rawIndices);
 }
