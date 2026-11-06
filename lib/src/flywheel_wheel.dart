@@ -17,6 +17,67 @@ double _cardOpacity(double tc, int visibleSlots) {
   return base * fade;
 }
 
+/// Where one card sits on the wheel, shared by paint and hit-testing so a tap
+/// lands on exactly what is drawn.
+///
+/// [width] is the wheel's own width (cards are centred horizontally in it).
+class WheelGeometry {
+  const WheelGeometry({
+    required this.width,
+    required this.cardWidth,
+    required this.cardHeight,
+    required this.angularStep,
+    required this.radius,
+    required this.visibleSlots,
+  });
+
+  final double width;
+  final double cardWidth;
+  final double cardHeight;
+  final double angularStep;
+  final double radius;
+  final int visibleSlots;
+
+  double get _edge => visibleSlots + 0.5;
+
+  /// Opacity of the card at wheel distance [t] (in pages) from the centre.
+  double opacityAt(double t) => _cardOpacity(t.clamp(-_edge, _edge), visibleSlots);
+
+  /// Maps card-local coordinates to wheel coordinates for the card at wheel
+  /// distance [t]: translate onto the arc, then rotate about the card centre.
+  Matrix4 transformAt(double t) {
+    final theta = t.clamp(-_edge, _edge) * angularStep;
+    final left = (width - cardWidth) / 2;
+    return Matrix4.translationValues(left + radius * sin(theta), radius * (1.0 - cos(theta)), 0)
+      ..translateByDouble(cardWidth / 2, cardHeight / 2, 0, 1)
+      ..rotateZ(theta)
+      ..translateByDouble(-cardWidth / 2, -cardHeight / 2, 0, 1);
+  }
+
+  /// Whether [point] (wheel coordinates) falls on the card at distance [t].
+  bool contains(Offset point, double t) {
+    final inverse = Matrix4.tryInvert(transformAt(t));
+    if (inverse == null) return false;
+    final local = MatrixUtils.transformPoint(inverse, point);
+    return local.dx >= 0 && local.dx <= cardWidth && local.dy >= 0 && local.dy <= cardHeight;
+  }
+
+  /// The raw page of the frontmost visible card under [point], or null.
+  ///
+  /// Walks [rawPages] nearest-the-centre first (the reverse of paint order)
+  /// and skips cards that are fully transparent, as paint does.
+  int? hitTest(Offset point, double page, Iterable<int> rawPages) {
+    final candidates = rawPages.toList()
+      ..sort((a, b) => (a - page).abs().compareTo((b - page).abs()));
+    for (final raw in candidates) {
+      final t = raw - page;
+      if (opacityAt(t) <= 0) continue;
+      if (contains(point, t)) return raw;
+    }
+    return null;
+  }
+}
+
 /// Renders a window of cards arranged on the rim of a circle whose center sits
 /// below the carousel.
 ///
@@ -82,7 +143,11 @@ class FlywheelWheel<T> extends StatelessWidget {
           child: SizedBox(
             width: cardWidth,
             height: cardHeight,
-            child: itemBuilder(context, items[index], index == selectedIndex),
+            // Only the centre card is announced; the rest are decoration.
+            child: ExcludeSemantics(
+              excluding: rawIndex != centerPage,
+              child: itemBuilder(context, items[index], index == selectedIndex),
+            ),
           ),
         ),
       );
@@ -133,26 +198,24 @@ class _WheelFlowDelegate extends FlowDelegate {
   @override
   void paintChildren(FlowPaintingContext context) {
     final page = controller.hasClients ? (controller.page ?? fallbackPage) : fallbackPage;
-    final edge = visibleSlots + 0.5;
+    final geometry = WheelGeometry(
+      width: context.size.width,
+      cardWidth: cardWidth,
+      cardHeight: cardHeight,
+      angularStep: angularStep,
+      radius: radius,
+      visibleSlots: visibleSlots,
+    );
 
     final order = List<int>.generate(rawIndices.length, (i) => i);
     final ts = [for (final raw in rawIndices) raw - page];
     // Farthest first so the center card is painted last (on top).
     order.sort((a, b) => ts[b].abs().compareTo(ts[a].abs()));
 
-    // Cards are laid out at the origin; centre them horizontally at the top.
-    final left = (context.size.width - cardWidth) / 2;
     for (final i in order) {
-      final tc = ts[i].clamp(-edge, edge);
-      final opacity = _cardOpacity(tc, visibleSlots);
+      final opacity = geometry.opacityAt(ts[i]);
       if (opacity <= 0) continue;
-      final theta = tc * angularStep;
-      final transform =
-          Matrix4.translationValues(left + radius * sin(theta), radius * (1.0 - cos(theta)), 0)
-            ..translateByDouble(cardWidth / 2, cardHeight / 2, 0, 1)
-            ..rotateZ(theta)
-            ..translateByDouble(-cardWidth / 2, -cardHeight / 2, 0, 1);
-      context.paintChild(i, transform: transform, opacity: opacity);
+      context.paintChild(i, transform: geometry.transformAt(ts[i]), opacity: opacity);
     }
   }
 

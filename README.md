@@ -42,9 +42,32 @@ FlywheelCarousel<MyItem>(
 );
 ```
 
+## 🎮 Controlling the wheel
+
+```dart
+final controller = FlywheelCarouselController();
+
+FlywheelCarousel<String>(
+  items: items,
+  controller: controller,
+  semanticLabel: 'Colours',
+  itemBuilder: (context, item, isSelected) => FlywheelItemCard(/* ... */),
+);
+
+// Later, e.g. from buttons (after the first frame):
+controller.next();
+controller.previous();
+controller.animateToItem(4); // shortest way round when looping
+controller.jumpToItem(0);
+controller.addListener(() => print(controller.index));
+```
+
+Dispose the controller yourself. With reduced motion enabled
+(`MediaQuery.disableAnimations`) moves jump instead of animating.
+
 ## 📦 What's inside
 
-- 🧩 **Widgets:** `FlywheelCarousel<T>`, `FlywheelItemCard`.
+- 🧩 **Widgets:** `FlywheelCarousel<T>`, `FlywheelItemCard`, `FlywheelCarouselController`.
 - ⚙️ **Physics:** `FreewheelPhysics` — exported for advanced consumers who want to wrap or tune the scroll behavior.
 - 🎛️ **Tunables:** wheel radius, angular step, viewport fraction, drag coefficient, visible slots, loop vs. clamp.
 - 🪶 **Theme-agnostic:** no opinions on colors or fonts — `itemBuilder` owns the look.
@@ -68,6 +91,10 @@ FlywheelCarousel<MyItem>(
 | `visibleSlots`     | `2`        | Half-window — cards rendered on each side of center.      |
 | `dragCoefficient`  | `0.35`     | Coast. Higher = longer spin (0–1, exclusive).             |
 | `loop`             | `true`     | Infinite loop or clamped at edges.                        |
+| `controller`       | `null`     | `FlywheelCarouselController` to move the wheel from code. |
+| `onItemTap`        | `null`     | Fires with the item index when a card is tapped.          |
+| `selectOnTap`      | `true`     | Tapping a side card turns the wheel to it.                |
+| `semanticLabel`    | `null`     | Screen-reader label; the position ("2 of 5") is added.    |
 
 `FlywheelItemCard` is an opinionated layout (`leading + title + subtitle + indicator pill`) you can use or skip. For a totally custom shape, build your own widget inside `itemBuilder`.
 
