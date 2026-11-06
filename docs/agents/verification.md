@@ -14,8 +14,8 @@ the verifier itself could not start (bad tier, missing runtime, not a git repo).
 ## The tiers, and the real commands behind them
 
 Every command below exists in this repo's toolchain and was run against this tree at
-bootstrap. There is no CI workflow, no `Makefile` and no script runner here — no
-`.github/`, no `package.json` — so these come from the Dart/Flutter CLI directly.
+bootstrap. CI (`.github/workflows/ci.yml`) runs the same checks on every pull request. There is
+no `Makefile` and no script runner, so these come from the Dart/Flutter CLI directly.
 
 | Tier | Checks | Roughly |
 |---|---|---|
@@ -91,35 +91,19 @@ nothing about a physics or geometry change — which is exactly why
 `lib/src/flywheel_physics.dart` is classified `full` tier and carries a `standard` review
 requirement despite being one 66-line file.
 
-## Known baseline (2026-09-21, at harness bootstrap)
+## Known baseline (2026-11-06, after the e2e-tooling change)
 
-Measured on the pre-existing tree, before any harness file was written:
+On a clean checkout every check passes:
 
 | Check | Result |
 |---|---|
-| `format` | **fails** — 6 of 7 Dart files reformat |
-| `analyze` | passes — "No issues found!" |
+| `format` | passes — `formatter: page_width: 100` in both `analysis_options.yaml` files |
+| `analyze` | passes — and no longer rewrites the options files |
 | `test` | passes — 2/2 |
 
-The six files `dart format` wants to rewrite are `example/lib/main.dart`, all four
-`lib/src/*.dart`, and `test/flywheel_carousel_test.dart`.
-
-This means **`tool/harness/verify fast` reports `failed` on a clean checkout**, and will
-keep doing so until someone reformats. That is recorded, not hidden: the bootstrap
-deliberately did not run `dart format .`, because rewriting six source files to make a
-harness install look green would have buried the harness commit in unrelated churn and
-changed code nobody asked to change.
-
-To clear it when you decide to — as its own commit, not folded into a feature:
-
-```
-dart format .
-tool/harness/verify normal
-```
-
-Until then, read a `fast`/`normal` failure by looking at *which* check failed. If the only
-failure is `format` and its output lists files you did not touch, that is this baseline,
-not your change. If `analyze` or `test` fails, that is new and it is yours.
+A `format`, `analyze` or `test` failure is therefore new and yours. `flutter pub publish
+--dry-run` also passes; `.pubignore` keeps `demo/*.mov`, agent docs and `tool/` out of the
+archive.
 
 ## Independent review
 

@@ -11,7 +11,10 @@ class FlywheelExampleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'flywheel_carousel',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD97757)), useMaterial3: true),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD97757)),
+        useMaterial3: true,
+      ),
       home: const _Home(),
     );
   }
@@ -81,7 +84,8 @@ class _ColorCardDemoState extends State<_ColorCardDemo> {
               ),
             ),
             title: item.name,
-            subtitle: '#${item.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+            subtitle:
+                '#${item.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
             selected: isSelected,
           ),
         ),
@@ -100,7 +104,13 @@ class _IconBuilderDemo extends StatefulWidget {
 }
 
 class _IconBuilderDemoState extends State<_IconBuilderDemo> {
-  static const _icons = <IconData>[Icons.bolt, Icons.coffee, Icons.spa, Icons.travel_explore, Icons.rocket_launch];
+  static const _icons = <IconData>[
+    Icons.bolt,
+    Icons.coffee,
+    Icons.spa,
+    Icons.travel_explore,
+    Icons.rocket_launch,
+  ];
 
   int _selected = 0;
 

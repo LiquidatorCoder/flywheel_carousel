@@ -1,0 +1,15 @@
+# When present, pub ignores .gitignore, so its rules are repeated here.
+build/
+example/build/
+example/.dart_tool/
+coverage/
+.claude/
+
+# Repo tooling and agent docs: not part of the package.
+AGENTS.md
+CLAUDE.md
+docs/
+tool/
+
+# Unreferenced 4+ MB screen recordings; the README embeds the .gif files.
+demo/*.mov

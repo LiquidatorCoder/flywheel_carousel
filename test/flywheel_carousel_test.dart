@@ -13,10 +13,8 @@ void main() {
               items: const ['A', 'B', 'C', 'D', 'E'],
               initialIndex: 2,
               onIndexChanged: (i) => lastIndex = i,
-              itemBuilder: (context, item, isSelected) => Text(
-                '$item:${isSelected ? '1' : '0'}',
-                textDirection: TextDirection.ltr,
-              ),
+              itemBuilder: (context, item, isSelected) =>
+                  Text('$item:${isSelected ? '1' : '0'}', textDirection: TextDirection.ltr),
             ),
           ),
         ),
@@ -40,10 +38,8 @@ void main() {
               items: const ['A', 'B', 'C'],
               initialIndex: 0,
               loop: false,
-              itemBuilder: (context, item, isSelected) => Text(
-                item,
-                textDirection: TextDirection.ltr,
-              ),
+              itemBuilder: (context, item, isSelected) =>
+                  Text(item, textDirection: TextDirection.ltr),
             ),
           ),
         ),
