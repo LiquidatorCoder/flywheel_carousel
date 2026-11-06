@@ -1,3 +1,6 @@
+analyzer:
+  exclude:
+    - build/**
 include: package:flutter_lints/flutter.yaml
 
 linter:
@@ -8,3 +11,6 @@ linter:
     avoid_unnecessary_containers: true
     sized_box_for_whitespace: true
     use_key_in_widget_constructors: true
+
+formatter:
+  page_width: 100

@@ -53,9 +53,10 @@ source — see `.claude/docs/routing.yaml`.
 
 ## Commands (the real ones)
 
-There is **no CI workflow, no Makefile, and no script runner** in this repo — no
-`.github/`, no `Makefile`, no `package.json`. These are the actual toolchain commands,
-each confirmed to run here at bootstrap (Flutter 3.44.3 stable, Dart 3.12.2):
+CI is `.github/workflows/ci.yml` (push to `main` and every pull request): format, analyze,
+test, example analyze, publish dry-run, and a check that analyze left the options files
+untouched. There is no Makefile and no script runner. These are the actual toolchain commands
+(Flutter 3.44.3 stable, Dart 3.12.2 at bootstrap):
 
 | Purpose | Command |
 |---|---|
@@ -160,18 +161,15 @@ introduce one as a side effect of another change.
 - `.dart_tool/`, `pubspec.lock` and `example/pubspec.lock` are tracked-but-generated — see
   the trap section above. They are never part of a deliberate change set.
 
-## Known baseline (2026-09-21, at harness bootstrap)
+## Known baseline (2026-11-06, after the e2e-tooling change)
 
-Measured on the pre-existing tree, before any harness file was written:
+All of these pass on a clean checkout:
 
 | Check | Result |
 |---|---|
-| `dart format --output=none --set-exit-if-changed .` | **fails** — 6 of 7 Dart files reformat (`example/lib/main.dart`, all four `lib/src/*.dart`, `test/flywheel_carousel_test.dart`) |
-| `flutter analyze` | clean — "No issues found!" |
+| `dart format --output=none --set-exit-if-changed .` | passes — `formatter: page_width: 100` is set in both `analysis_options.yaml` files |
+| `flutter analyze` | clean; no longer rewrites the options files (the `analyzer: exclude:` block Flutter 3.47 inserts is committed) |
 | `flutter test` | 2/2 green |
+| `flutter pub publish --dry-run` | passes; `.pubignore` drops `demo/*.mov`, agent docs and `tool/` (archive ~6 MB to ~1 MB) |
 
-The format failure is **pre-existing repository state and was deliberately left
-untouched** by the bootstrap: reformatting six files would have buried the harness commit
-in unrelated churn. It means a `fast` or `normal` run reports `failed` on an otherwise
-untouched checkout. See `docs/agents/verification.md` for how to read that, and for the
-one-line command that clears it when someone decides to.
+`.pubignore` makes pub ignore `.gitignore`, so keep its rules in sync with it.

@@ -55,10 +55,7 @@ class FlywheelItemCard extends StatelessWidget {
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 3),
-          Text(
-            subtitle!,
-            style: subtitleStyle ?? theme.textTheme.labelSmall,
-          ),
+          Text(subtitle!, style: subtitleStyle ?? theme.textTheme.labelSmall),
         ],
         SizedBox(height: indicatorSpacing),
         Container(
