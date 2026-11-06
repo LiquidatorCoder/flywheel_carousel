@@ -15,6 +15,7 @@
 - Fixed: cards fade out fully at the edge of the window instead of popping in and out at 15% opacity.
 - Fixed: `onTick` fires once per crossed page, also when several pages pass in one frame.
 - Fixed: changing `items`, `loop` or `viewportFraction` after the first build keeps the current item and a valid selection.
+- Performance: `itemBuilder` now runs once per page crossing instead of for every visible card on every frame (about 15× fewer calls during a fling); per-frame work is paint-only.
 
 ## 0.1.0
 
