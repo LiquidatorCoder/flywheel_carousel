@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flywheel_carousel/flywheel_carousel.dart';
@@ -419,18 +421,13 @@ void main() {
     skip: knownBug('L5'),
   );
 
-  testWidgets(
-    'E14b_item_card_large_text [L4]',
-    (tester) async {
-      tester.platformDispatcher.textScaleFactorTestValue = 3.0;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await pumpFixture(tester, Probe(), kind: CardKind.itemCard);
-      await pumpFor(tester, const Duration(milliseconds: 300));
-      expect(tester.takeException(), isNull, reason: 'item card must not overflow');
-    },
-    // L4 — fixed in the item card PR (Column overflows its 200 px card at 3.0x text).
-    skip: knownBug('L4'),
-  );
+  testWidgets('E14b_item_card_large_text [L4]', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 3.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await pumpFixture(tester, Probe(), kind: CardKind.itemCard);
+    await pumpFor(tester, const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull, reason: 'item card must not overflow');
+  });
 
   testWidgets('E14c_custom_builder_landscape', (tester) async {
     rotateToLandscape(tester);
@@ -490,5 +487,92 @@ void main() {
       await awaitSettle(tester, c, since: sw, timeout: const Duration(seconds: 12));
     });
     expect(m['builder_calls_per_frame'] ?? 0, lessThanOrEqualTo(0.5));
+  });
+
+  testWidgets('E17_tap_to_select', (tester) async {
+    await tester.pumpWidget(const FlywheelExampleApp());
+    await tester.pumpAndSettle();
+    await openTab(tester, 'Item card');
+    expect(find.text('Selected: Coral'), findsOneWidget);
+    final c = controllerOf(tester);
+    final start = c.page!;
+
+    // A point on the right neighbour (Sage) the centre card does not cover.
+    final target = tester.getCenter(find.text('Sage')) + const Offset(40, 0);
+
+    late int latencyMs;
+    await measure('E17_tap_to_select', () async {
+      final sw = Stopwatch()..start();
+      await tester.tapAt(target);
+      while (find.text('Selected: Sage').evaluate().isEmpty && sw.elapsedMilliseconds < 600) {
+        await tester.pump(frame);
+      }
+      latencyMs = sw.elapsedMilliseconds;
+      record('E17_tap_to_select', 'tap_to_selected_ms', latencyMs);
+      await awaitSettle(tester, c);
+    });
+
+    expect(find.text('Selected: Sage'), findsOneWidget);
+    expect(latencyMs, lessThan(600), reason: 'selection follows the tap within 600 ms');
+    expect(c.page, start + 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('E18_controller_next_previous', (tester) async {
+    final controller = FlywheelCarouselController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: FlywheelCarousel<String>(
+              items: const ['0', '1', '2', '3', '4'],
+              controller: controller,
+              itemBuilder: (context, label, selected) => Container(
+                color: selected ? Colors.orange : Colors.blueGrey,
+                alignment: Alignment.center,
+                child: Text(label),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    final c = controllerOf(tester);
+
+    Future<int> timed(Future<void> Function() move) async {
+      final sw = Stopwatch()..start();
+      final done = move();
+      var finished = false;
+      unawaited(done.whenComplete(() => finished = true));
+      while (!finished && sw.elapsedMilliseconds < 2000) {
+        await tester.pump(frame);
+      }
+      return sw.elapsedMilliseconds;
+    }
+
+    await measure('E18_controller_next_previous', () async {
+      record('E18_controller_next_previous', 'next_1_ms', await timed(controller.next));
+      record('E18_controller_next_previous', 'next_2_ms', await timed(controller.next));
+      record('E18_controller_next_previous', 'previous_ms', await timed(controller.previous));
+    });
+    expect(controller.index, 1);
+    expect(isIntegerPage(c.page!), isTrue);
+
+    // 0 -> 4 of 5 is one page back, not four forward.
+    controller.jumpToItem(0);
+    await tester.pump();
+    final before = c.page!;
+    await measure('E18b_animate_to_item_shortest_path', () async {
+      record(
+        'E18b_animate_to_item_shortest_path',
+        'animate_ms',
+        await timed(() => controller.animateToItem(4)),
+      );
+    });
+    expect(c.page, before - 1, reason: '0 -> 4 of 5 takes the one-page path backwards');
+    expect(controller.index, 4);
+    expect(tester.takeException(), isNull);
   });
 }

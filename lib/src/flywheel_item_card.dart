@@ -42,6 +42,21 @@ class FlywheelItemCard extends StatelessWidget {
     final activeColor = activeIndicatorColor ?? theme.colorScheme.primary;
     final inactiveColor = inactiveIndicatorColor ?? theme.colorScheme.outlineVariant;
 
+    // Keep the width bounded (so the title still ellipsizes) but let the height
+    // run free and scale the whole stack down only when it would overflow the
+    // card, e.g. at large text scales.
+    return LayoutBuilder(
+      builder: (context, constraints) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: constraints.hasBoundedWidth ? constraints.maxWidth : null,
+          child: _column(theme, activeColor, inactiveColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _column(ThemeData theme, Color activeColor, Color inactiveColor) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
