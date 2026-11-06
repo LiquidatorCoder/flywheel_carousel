@@ -100,12 +100,34 @@ Dispose the controller yourself. With reduced motion enabled
 
 ## 🚀 Example
 
-A runnable demo app lives in [`example/`](example/):
+A runnable demo app lives in [`example/`](example/), with a light and a dark theme (it follows the system):
 
 ```bash
 cd example
 flutter run
 ```
+
+| Tab | Shows |
+| --- | --- |
+| **Cards** | `FlywheelItemCard` in a looping wheel, haptics on tick, animated "Selected" readout. |
+| **Icons** | A fully custom `itemBuilder` and a tighter `wheelRadius`. |
+| **No loop** | `loop: false` — the wheel stops at the first and last item. |
+| **Controls** | `FlywheelCarouselController` (previous / next / jump to a chip), `onItemTap` and `semanticLabel`. |
+
+## ⚡ Performance
+
+Cards are built once per page crossing and only repainted per frame while the wheel moves, so a long
+coast does not rebuild your `itemBuilder` every frame. Frame timing, settle latency and builder calls
+per frame are measured on a simulator; the numbers live in [`example/README.md`](example/README.md).
+
+## 🧪 Testing
+
+```bash
+flutter test   # unit and widget tests
+```
+
+The on-simulator end-to-end suite (flings, tab switching, landscape, tap-to-select, controller) is run
+with the `flutter drive` command in [`example/README.md`](example/README.md).
 
 ## 📄 License
 

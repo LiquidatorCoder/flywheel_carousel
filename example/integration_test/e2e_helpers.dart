@@ -94,8 +94,9 @@ Future<Map<String, num>> measure(String name, Future<void> Function() body) asyn
 // ---------------------------------------------------------------------------
 // Carousel access
 
-/// The carousel (any type argument) in the tree.
-Finder carouselFinder() => find.byWidgetPredicate((w) => w is FlywheelCarousel).first;
+/// The on-screen carousel (any type argument). Tabs are kept alive, so
+/// off-screen carousels stay in the tree; only the visible one is hit-testable.
+Finder carouselFinder() => find.byWidgetPredicate((w) => w is FlywheelCarousel).hitTestable().first;
 
 PageController controllerOf(WidgetTester tester, [Finder? carousel]) {
   final pageView = find.descendant(
