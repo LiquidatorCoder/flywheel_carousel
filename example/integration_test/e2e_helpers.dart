@@ -174,9 +174,11 @@ Future<SettleResult> awaitSettle(
 // ---------------------------------------------------------------------------
 // Gestures (explicit timestamps so velocities are deterministic)
 
-/// Drags [dx] logical px in [steps] frames, pauses, sends a zero-delta move
-/// (resets the velocity tracker) then releases: a "slow drag" that releases
-/// with ~zero velocity.
+/// Drags [dx] logical px in [steps] frames, holds still for [hold] of REAL time
+/// with no further pointer events, then releases: a "slow drag" that releases
+/// with ~zero velocity. On iOS the velocity tracker reports zero only when no
+/// sample was added in the last 40 ms of real time, so no event (not even a
+/// zero-delta move) may be sent during the hold.
 Future<void> dragStill(
   WidgetTester tester,
   Offset from,
@@ -193,9 +195,8 @@ Future<void> dragStill(
     await tester.pump(frame);
     await onStep?.call();
   }
-  await tester.pump(hold);
+  await pumpFor(tester, hold);
   ts += hold;
-  await g.moveBy(Offset.zero, timeStamp: ts);
   await g.up(timeStamp: ts);
 }
 
@@ -210,6 +211,34 @@ Future<Stopwatch> flingRelease(WidgetTester tester, Offset from, double dx, doub
     ts += Duration(microseconds: stepUs);
     await g.moveBy(Offset(dx / n, 0), timeStamp: ts);
   }
+  final sw = Stopwatch()..start();
+  await g.up(timeStamp: ts);
+  return sw;
+}
+
+/// Deterministic gentle release: gets past touch slop with one 24 px move,
+/// then 12 moves totalling `pages * pageWidth` px at exactly [speed] px/s, then
+/// releases at the last timestamp (no hold, no zero-delta move). [onRelease]
+/// runs just before the pointer-up. Returns a stopwatch started at release.
+Future<Stopwatch> nudge(
+  WidgetTester tester,
+  Offset from, {
+  required double pages,
+  required double speed,
+  void Function()? onRelease,
+}) async {
+  const n = 12;
+  final total = pages * pageWidthOf(tester);
+  final g = await tester.startGesture(from);
+  var ts = const Duration(milliseconds: 16);
+  await g.moveBy(const Offset(-24, 0), timeStamp: ts);
+  final dx = total / n;
+  final stepUs = (dx / speed * 1e6).round();
+  for (var i = 0; i < n; i++) {
+    ts += Duration(microseconds: stepUs);
+    await g.moveBy(Offset(-dx, 0), timeStamp: ts);
+  }
+  onRelease?.call();
   final sw = Stopwatch()..start();
   await g.up(timeStamp: ts);
   return sw;
