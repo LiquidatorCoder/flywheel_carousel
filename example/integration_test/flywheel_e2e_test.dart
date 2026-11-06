@@ -276,11 +276,7 @@ void main() {
   testWidgets('E8_tab_switching', (tester) async {
     await tester.pumpWidget(const FlywheelExampleApp());
     await tester.pumpAndSettle();
-    final expected = {
-      'Item card': 'Selected: Sage',
-      'Custom builder': 'Index: 1',
-      'No loop': 'Index: 3',
-    };
+    final expected = {'Cards': 'Selected: Sage', 'Icons': 'Index: 1', 'No loop': 'Index: 3'};
 
     await measure('E8_tab_switching', () async {
       for (final tab in expected.keys) {
@@ -417,8 +413,7 @@ void main() {
       });
       expect(tester.takeException(), isNull, reason: 'no overflow / layout errors');
     },
-    // L5 — fixed in the example polish PR (tab Column overflows 4 px in landscape).
-    skip: knownBug('L5'),
+    // L5 — fixed in the example polish PR (tab bodies scroll instead of overflowing).
   );
 
   testWidgets('E14b_item_card_large_text [L4]', (tester) async {
@@ -492,7 +487,7 @@ void main() {
   testWidgets('E17_tap_to_select', (tester) async {
     await tester.pumpWidget(const FlywheelExampleApp());
     await tester.pumpAndSettle();
-    await openTab(tester, 'Item card');
+    await openTab(tester, 'Cards');
     expect(find.text('Selected: Coral'), findsOneWidget);
     final c = controllerOf(tester);
     final start = c.page!;
