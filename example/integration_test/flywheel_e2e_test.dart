@@ -129,7 +129,6 @@ void main() {
       });
     },
     // B9 — fixed in fix/freewheel-physics (friction tail outlasts 6 s).
-    skip: knownBug('B9'),
   );
 
   testWidgets(
@@ -166,7 +165,6 @@ void main() {
       expect(failures, isEmpty);
     },
     // B6 — fixed in fix/freewheel-physics (FrictionSimulation.through assert).
-    skip: knownBug('B6'),
   );
 
   testWidgets(
@@ -194,7 +192,6 @@ void main() {
       expect(tester.takeException(), isNull);
     },
     // B4 — fixed in fix/freewheel-physics (landing just past 0.5 crawls via friction-through).
-    skip: knownBug('B4'),
   );
 
   testWidgets(
@@ -223,7 +220,6 @@ void main() {
       trace.dispose();
     },
     // B5 — fixed in fix/freewheel-physics (coasts to ~page 15 then springs back).
-    skip: knownBug('B5'),
   );
 
   testWidgets('E6b_non_loop_slow_drags_reach_ends', (tester) async {
@@ -336,7 +332,6 @@ void main() {
       });
     },
     // B8 — fixed in fix/freewheel-physics (catch-mid-coast settle ~900 ms).
-    skip: knownBug('B8'),
   );
 
   testWidgets(

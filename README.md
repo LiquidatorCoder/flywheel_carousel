@@ -66,7 +66,7 @@ FlywheelCarousel<MyItem>(
 | `angularStep`      | `0.42` rad | ~24° between cards on the arc.                            |
 | `wheelRadius`      | `320`      | Wheel radius in logical pixels.                           |
 | `visibleSlots`     | `2`        | Half-window — cards rendered on each side of center.      |
-| `dragCoefficient`  | `0.35`     | Friction. Lower = longer coast.                           |
+| `dragCoefficient`  | `0.35`     | Coast. Higher = longer spin (0–1, exclusive).             |
 | `loop`             | `true`     | Infinite loop or clamped at edges.                        |
 
 `FlywheelItemCard` is an opinionated layout (`leading + title + subtitle + indicator pill`) you can use or skip. For a totally custom shape, build your own widget inside `itemBuilder`.
