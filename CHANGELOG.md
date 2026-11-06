@@ -6,6 +6,7 @@
 - Added: `onItemTap` and `selectOnTap` (default `true`). Tapping a card reports it, and tapping a side card turns the wheel to it. A tap that lands on a spinning wheel only stops it.
 - Added: screen-reader support. The carousel is one adjustable control announcing "2 of 5" (swipe up or down to change it) and `semanticLabel`; only the centre card is exposed, and the gesture layer no longer appears as an empty scrollable.
 - Added: reduced motion. With `MediaQuery.disableAnimations` set, controller moves and taps jump instead of animating.
+- Fixed: `FlywheelItemCard` ellipsizes long subtitles instead of letting them run into neighbouring cards.
 - Fixed: `FlywheelItemCard` no longer overflows its card at large text scales; its content scales down to fit and is unchanged at normal sizes.
 - Fixed: `FreewheelPhysics` no longer throws (debug) or leaves the wheel stuck between cards (release) on a gentle swipe.
 - Fixed: slow flicks no longer crawl for seconds toward the next card; the wheel settles promptly.
