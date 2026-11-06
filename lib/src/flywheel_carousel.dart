@@ -101,7 +101,9 @@ class _FlywheelCarouselState<T> extends State<FlywheelCarousel<T>> {
   Widget build(BuildContext context) {
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final cardWidth = viewportWidth * widget.viewportFraction;
-    final virtualItemCount = widget.loop ? _count * _loopMultiplier * 2 : _count;
+    // Unbounded in loop mode: a finite huge count trips the sliver's
+    // itemExtent-multiple precision assert at many widths.
+    final int? virtualItemCount = widget.loop ? null : _count;
 
     return SizedBox(
       height: widget.height,
